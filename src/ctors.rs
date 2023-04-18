@@ -27,7 +27,7 @@ impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> Map<K, V, N> {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            next: 0,
+            len: 0,
             pairs: unsafe { *MaybeUninit::<[Pair<K, V>; N]>::uninit().as_mut_ptr() },
         }
     }

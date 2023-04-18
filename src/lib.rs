@@ -39,16 +39,9 @@ mod ctors;
 mod debug;
 mod iterators;
 mod map;
-mod pair;
 mod serialization;
 
-/// A pair in the Map.
-#[derive(Clone, Default, Copy, Eq, PartialEq)]
-enum Pair<K, V> {
-    Present((K, V)),
-    #[default]
-    Absent,
-}
+pub type Pair<K, V> = Option<(K, V)>;
 
 /// A faster alternative of `HashMap`.
 ///
@@ -60,26 +53,19 @@ enum Pair<K, V> {
 /// compile time.
 #[derive(Clone, Copy)]
 pub struct Map<K: Copy + PartialEq, V: Clone + Copy, const N: usize> {
-    next: usize,
+    len: usize,
     pairs: [Pair<K, V>; N],
 }
 
 /// Iterator over the `Map`.
-pub struct Iter<'a, K, V, const N: usize> {
-    next: usize,
-    pos: usize,
-    pairs: &'a [Pair<K, V>; N],
-}
+pub type Iter<'a, K, V, const N: usize> = Flatten<Take<core::slice::Iter<'a, Pair<K, V>>>>;
 
 /// Into-iterator over the `Map`.
-pub struct IntoIter<'a, K, V, const N: usize> {
-    next: usize,
-    pos: usize,
-    pairs: &'a [Pair<K, V>; N],
-}
+pub type IntoIter<K, V, const N: usize> = Flatten<Take<core::array::IntoIter<Pair<K, V>, N>>>;
 
 #[cfg(test)]
 use simple_logger::SimpleLogger;
+use std::iter::{Flatten, Take};
 
 #[cfg(test)]
 use log::LevelFilter;

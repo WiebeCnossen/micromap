@@ -35,8 +35,8 @@ impl<K: Copy + PartialEq + Display, V: Clone + Copy + Display, const N: usize> D
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let mut parts = vec![];
-        for i in 0..self.next {
-            if let Present((k, v)) = &self.pairs[i] {
+        for i in 0..self.len {
+            if let Some((k, v)) = &self.pairs[i] {
                 parts.push(format!("{k}: {v}"));
             }
         }
@@ -44,7 +44,6 @@ impl<K: Copy + PartialEq + Display, V: Clone + Copy + Display, const N: usize> D
     }
 }
 
-use crate::Pair::Present;
 #[cfg(test)]
 use anyhow::Result;
 

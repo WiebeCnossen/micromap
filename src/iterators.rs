@@ -18,58 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::{IntoIter, Iter, Map};
-
-impl<'a, K: Clone, V: Clone, const N: usize> Iterator for Iter<'a, K, V, N> {
-    type Item = (&'a K, &'a V);
-
-    #[inline]
-    #[must_use]
-    fn next(&mut self) -> Option<Self::Item> {
-        while self.pos < self.next {
-            if let Present(p) = &self.pairs[self.pos] {
-                self.pos += 1;
-                return Some((&p.0, &p.1));
-            }
-            self.pos += 1;
-        }
-        None
-    }
-}
-
-impl<'a, K: Clone, V: Clone, const N: usize> Iterator for IntoIter<'a, K, V, N> {
-    type Item = (K, V);
-
-    #[inline]
-    #[must_use]
-    fn next(&mut self) -> Option<Self::Item> {
-        while self.pos < self.next {
-            if self.pairs[self.pos].is_some() {
-                let pair = self.pairs[self.pos].clone().unwrap();
-                self.pos += 1;
-                return Some(pair);
-            }
-            self.pos += 1;
-        }
-        None
-    }
-}
+use crate::Map;
 
 impl<'a, K: Copy + PartialEq, V: Clone + Copy, const N: usize> IntoIterator for &'a Map<K, V, N> {
-    type Item = (K, V);
-    type IntoIter = IntoIter<'a, K, V, N>;
+    type Item = &'a (K, V);
+    type IntoIter = crate::Iter<'a, K, V, N>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        IntoIter {
-            next: self.next,
-            pos: 0,
-            pairs: &self.pairs,
-        }
+        self.iter()
     }
 }
 
-use crate::Pair::Present;
+impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> IntoIterator for Map<K, V, N> {
+    type Item = (K, V);
+    type IntoIter = crate::IntoIter<K, V, N>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.pairs.into_iter().take(self.len).flatten()
+    }
+}
+
 #[cfg(test)]
 use anyhow::Result;
 

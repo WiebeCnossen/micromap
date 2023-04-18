@@ -18,8 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::Pair::{Absent, Present};
-use crate::{IntoIter, Iter, Map};
+use crate::{Iter, Map};
 
 impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> Default for Map<K, V, N> {
     fn default() -> Self {
@@ -28,71 +27,41 @@ impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> Default for Map<K, V,
 }
 
 impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> Map<K, V, N> {
-    /// Make an iterator over all pairs.
     #[inline]
-    #[must_use]
-    pub const fn iter(&self) -> Iter<K, V, N> {
-        Iter {
-            next: self.next,
-            pos: 0,
-            pairs: &self.pairs,
-        }
-    }
-
-    /// Make an iterator over all pairs.
-    #[inline]
-    #[must_use]
-    pub const fn into_iter(&self) -> IntoIter<K, V, N> {
-        IntoIter {
-            next: self.next,
-            pos: 0,
-            pairs: &self.pairs,
-        }
+    pub fn iter(&self) -> Iter<K, V, N> {
+        self.pairs.iter().take(self.len).flatten()
     }
 
     /// Is it empty?
     #[inline]
     #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub const fn is_empty(&self) -> bool {
+        self.len == 0
     }
 
     /// Return the total number of pairs inside.
     #[inline]
     #[must_use]
-    pub fn len(&self) -> usize {
-        if self.next == 0 {
-            return 0;
-        }
-        let mut busy = 0;
-        for i in 0..self.next {
-            if self.pairs[i].is_some() {
-                busy += 1;
-            }
-        }
-        busy
+    pub const fn len(&self) -> usize {
+        self.len
     }
 
     /// Does the map contain this key?
     #[inline]
     pub fn contains_key(&self, k: &K) -> bool {
-        for i in 0..self.next {
-            if let Present((bk, _bv)) = &self.pairs[i] {
-                if bk == k {
-                    return true;
-                }
-            }
-        }
-        false
+        self.into_iter().any(|(bk, _bv)| bk == k)
     }
 
     /// Remove by key.
     #[inline]
     pub fn remove(&mut self, k: &K) {
-        for i in 0..self.next {
-            if let Present((bk, _bv)) = &self.pairs[i] {
+        for i in 0..self.len {
+            if let Some((bk, _bv)) = &self.pairs[i] {
                 if bk == k {
-                    self.pairs[i] = Absent;
+                    if i < self.len - 1 {
+                        self.pairs[i] = self.pairs[self.len - 1];
+                    }
+                    self.len -= 1;
                     break;
                 }
             }
@@ -107,15 +76,9 @@ impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> Map<K, V, N> {
     #[inline]
     pub fn insert(&mut self, k: K, v: V) {
         self.remove(&k);
-        for i in 0..self.next {
-            if !self.pairs[i].is_some() {
-                self.pairs[i] = Present((k, v));
-                return;
-            }
-        }
-        if self.next < N {
-            self.pairs[self.next] = Present((k, v));
-            self.next += 1;
+        if self.len < N {
+            self.pairs[self.len] = Some((k, v));
+            self.len += 1;
             return;
         }
         panic!("There are only {N} pairs available in the map and all of them are already occupied")
@@ -125,14 +88,8 @@ impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> Map<K, V, N> {
     #[inline]
     #[must_use]
     pub fn get(&self, k: &K) -> Option<&V> {
-        for i in 0..self.next {
-            if let Present(p) = &self.pairs[i] {
-                if p.0 == *k {
-                    return Some(&p.1);
-                }
-            }
-        }
-        None
+        self.into_iter()
+            .find_map(|(bk, bv)| if bk == k { Some(bv) } else { None })
     }
 
     /// Get a mutable reference to a single value.
@@ -143,8 +100,8 @@ impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> Map<K, V, N> {
     #[inline]
     #[must_use]
     pub fn get_mut(&mut self, k: &K) -> Option<&mut V> {
-        for i in 0..self.next {
-            if let Present(p) = &mut self.pairs[i] {
+        for i in 0..self.len {
+            if let Some(p) = &mut self.pairs[i] {
                 if p.0 == *k {
                     return Some(&mut self.pairs[i].as_mut().unwrap().1);
                 }
@@ -156,7 +113,7 @@ impl<K: Copy + PartialEq, V: Clone + Copy, const N: usize> Map<K, V, N> {
     /// Remove all pairs from it, but keep the space intact for future use.
     #[inline]
     pub fn clear(&mut self) {
-        self.next = 0;
+        self.len = 0;
     }
 }
 
